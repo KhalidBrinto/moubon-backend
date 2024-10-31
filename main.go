@@ -33,5 +33,5 @@ func main() {
 	routes.AdminDashboardRoutes(router)
 
 	config.ConnectDatabase()
-	router.Run(":3000")
+	router.Run(":3010")
 }
