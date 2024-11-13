@@ -23,6 +23,6 @@ FROM golang:1.23.3-alpine3.20
 WORKDIR /
 COPY --from=build /main /main
 
-EXPOSE 3000
+EXPOSE 3010
 
 ENTRYPOINT [ "/main" ]
