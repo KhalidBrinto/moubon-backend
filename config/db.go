@@ -71,6 +71,7 @@ func ConnectDatabase() {
 		models.User{},
 		models.ProductAttribute{},
 		models.WishList{},
+		models.Shop{},
 	)
 	log.Println("Finished migration")
 	DB = db
