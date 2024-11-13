@@ -6,7 +6,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var jwtSecret = []byte("hanger-craft-jwt-secret-key")
+var jwtSecret = []byte("moubon-jwt-secret-key")
 
 // Claims structure for the JWT
 type Claims struct {

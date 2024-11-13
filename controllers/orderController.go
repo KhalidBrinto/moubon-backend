@@ -25,11 +25,17 @@ func CreateOrder(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	if len(order.OrderItems) == 0 {
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"message": "order items cannot be empty"})
+		return
+
+	}
 	order.UserID = c.GetUint("user_id")
 	order.OrderStatus = "pending"
 	order.ItemPrice = 0.0
 
-	if err := config.DB.Where("payment_method = ?", order.PaymentDetails.PaymentMethod).Find(&shipping_option).Error; err != nil {
+	if err := config.DB.Where("payment_method = ?", order.PaymentDetails.PaymentMethod).First(&shipping_option).Error; err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"message": "invalid payment method"})
 		return
 	}
@@ -50,9 +56,14 @@ func CreateOrder(c *gin.Context) {
 	for _, item := range order.OrderItems {
 		order.ItemPrice += item.PriceAtPurchase * float64(item.Quantity)
 
+		var ParentID uint
+		tx.Model(&models.Product{}).Select("parent_id").Where("id = ?", item.ProductID).First(&ParentID)
+		if ParentID == 0 {
+			ParentID = item.ProductID
+		}
 		// Fetch the existing inventory record for the product
 		var inventory models.Inventory
-		if err := tx.Where("product_id = ?", item.ProductID).First(&inventory).Error; err != nil {
+		if err := tx.Where("product_id = ?", ParentID).First(&inventory).Error; err != nil {
 			tx.Rollback()
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch inventory"})
 			return
@@ -78,6 +89,21 @@ func CreateOrder(c *gin.Context) {
 
 	}
 
+	if order.Coupon != "" {
+		coupon := ApplyCoupon(c, order.Coupon, order.UserID)
+		if coupon == nil {
+			c.JSON(http.StatusBadRequest, gin.H{"message": "Failed to apply coupon"})
+			return
+
+		}
+		if coupon.DiscountType == "percentage" {
+			order.DiscountAmount = order.DiscountAmount + order.ItemPrice*(coupon.DiscountValue/100)
+		} else {
+			order.DiscountAmount = order.DiscountAmount + coupon.DiscountValue
+		}
+	}
+
+	order.ShippingCost = shipping_option.ShippingCost
 	order.TotalPrice = order.ItemPrice - order.DiscountAmount + order.ShippingCost
 
 	order.PaymentDetails.OrderID = order.ID
@@ -110,7 +136,7 @@ func GetOrderByID(c *gin.Context) {
 	var order *serializers.OrderResponse
 
 	// Preload OrderItems to include them in the response
-	if err := config.DB.Model(&models.Order{}).Preload("User").Preload("PaymentDetails").Preload("OrderItems.Product").Preload("OrderShippingAddress").First(&order, orderID).Error; err != nil {
+	if err := config.DB.Model(&models.Order{}).Preload("User").Preload("PaymentDetails").Preload("OrderItems.Product").First(&order, orderID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
 		} else {
@@ -130,11 +156,11 @@ func GetOrders(c *gin.Context) {
 	if c.GetString("role") == "admin" {
 
 		// Preload OrderItems to include them in the response
-		model = config.DB.Model(&models.Order{}).Preload("User").Preload("PaymentDetails").Preload("OrderItems.Product").Preload("OrderShippingAddress").Order("created_at DESC")
+		model = config.DB.Model(&models.Order{}).Preload("User").Preload("PaymentDetails").Preload("OrderItems.Product").Order("created_at DESC")
 
 	} else {
 		// Preload OrderItems to include them in the response
-		model = config.DB.Model(&models.Order{}).Preload("User").Preload("OrderItems.Product").Preload("OrderShippingAddress").Where("user_id = ?", c.GetUint("user_id")).Order("created_at DESC")
+		model = config.DB.Model(&models.Order{}).Preload("User").Preload("OrderItems.Product").Where("user_id = ?", c.GetUint("user_id")).Order("created_at DESC")
 
 	}
 
@@ -277,4 +303,70 @@ func GetInventory(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, inventory)
+}
+
+func GetShippingOptions(c *gin.Context) {
+	var shippingOptions []*models.ShippingOptions
+
+	// Preload OrderItems to include them in the response
+	if err := config.DB.Model(&shippingOptions).Find(&shippingOptions).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, shippingOptions)
+}
+
+func CreateShippingOption(c *gin.Context) {
+	var shipping *models.ShippingOptions
+
+	// Bind the JSON request to the Payment struct
+	if err := c.BindJSON(&shipping); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Set the payment date to current time if it's not provided
+	// if payment.PaymentDate.IsZero() {
+	// 	payment.PaymentDate = time.Now()
+	// }
+
+	// Create the payment in the database
+	if err := config.DB.Create(&shipping).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to shipping option"})
+		return
+	}
+
+	// Return the created payment
+	c.JSON(http.StatusCreated, gin.H{"message": "shipping option added"})
+}
+
+func UpdateShippingOption(c *gin.Context) {
+	shippingID := c.Param("id")
+	var shipping *models.Payment
+
+	// Find the payment by ID
+	if err := config.DB.First(&shipping, shippingID).Error; err != nil {
+		if err == gorm.ErrRecordNotFound {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Shipping option not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+		return
+	}
+
+	// Bind the JSON request to the Payment struct (for status update)
+	if err := c.BindJSON(&shipping); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Update the payment status
+	if err := config.DB.Save(&shipping).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update shipping option"})
+		return
+	}
+
+	// Return the updated payment
+	c.JSON(http.StatusOK, gin.H{"message": "shipping option updated"})
 }

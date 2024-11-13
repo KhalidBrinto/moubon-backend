@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"encoding/base64"
 	"fmt"
 	"time"
 
@@ -10,10 +11,12 @@ import (
 type Parameters struct {
 	Featured   string `form:"featured"`
 	CategoryID string `form:"category_id"`
+	BrandID    string `form:"brand_id"`
 	StartPrice *int   `form:"start_price"`
 	EndPrice   *int   `form:"end_price"`
 	Status     string `form:"status"`
 	Month      string `form:"month"`
+	Key        string `form:"key"`
 }
 
 func ProductQueryParameterToMap(P Parameters) string {
@@ -34,6 +37,14 @@ func ProductQueryParameterToMap(P Parameters) string {
 
 		} else {
 			querystring = "category_id IN (" + P.CategoryID + ")"
+		}
+	}
+	if P.BrandID != "" {
+		if querystring != "" {
+			querystring = querystring + " AND brand_id IN (" + P.BrandID + ")"
+
+		} else {
+			querystring = "brand_id IN (" + P.BrandID + ")"
 		}
 	}
 	if P.Featured != "" {
@@ -108,4 +119,18 @@ func GenerateTransactionID() string {
 
 	// Return the ID with 'HC' prefix
 	return "INV" + string(txID)
+}
+
+// Decode Base64 string to []byte
+func DecodeBase64Image(base64String string) ([]byte, error) {
+	decodedImage, err := base64.StdEncoding.DecodeString(base64String)
+	if err != nil {
+		return nil, err
+	}
+	return decodedImage, nil
+}
+
+func EncodeImageToBase64(imageBytes []byte) string {
+	encodedString := base64.StdEncoding.EncodeToString(imageBytes)
+	return encodedString
 }

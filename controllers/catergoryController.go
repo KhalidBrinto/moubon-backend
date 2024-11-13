@@ -3,7 +3,6 @@ package controllers
 import (
 	"backend/config"
 	"backend/models"
-	"backend/serializers"
 	"errors"
 	"net/http"
 
@@ -14,21 +13,14 @@ import (
 // CreateCategory creates a new category
 func CreateCategory(c *gin.Context) {
 
-	var categoryRequest *serializers.CategoryCreateSerializer
+	var category *models.Category
 
 	// Bind the incoming JSON to the Category struct
-	if err := c.BindJSON(&categoryRequest); err != nil {
+	if err := c.BindJSON(&category); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	category := &models.Category{
-		Name:         categoryRequest.Name,
-		CategoryType: categoryRequest.CategoryType,
-		ParentID:     categoryRequest.ParentID,
-	}
-
-	// Insert the category into the database
 	if err := config.DB.Create(&category).Error; err != nil {
 		if errors.Is(err, gorm.ErrCheckConstraintViolated) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "CategoryType must be in ['parent', 'child']"})
@@ -39,7 +31,16 @@ func CreateCategory(c *gin.Context) {
 	}
 
 	// Return the newly created category
-	c.JSON(http.StatusOK, gin.H{"message": "category created successfully"})
+	c.JSON(http.StatusCreated, gin.H{"message": "category added successfully"})
+	// Insert the category into the database
+	// if err := config.DB.Create(&category).Error; err != nil {
+	// 	if errors.Is(err, gorm.ErrCheckConstraintViolated) {
+	// 		c.JSON(http.StatusBadRequest, gin.H{"error": "CategoryType must be in ['parent', 'child']"})
+	// 		return
+	// 	}
+	// 	c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	// 	return
+	// }
 }
 
 // GetCategories retrieves all categories with their products
@@ -51,13 +52,66 @@ func GetCategories(c *gin.Context) {
 	}
 
 	// Use Preload to load associated Products for each category
-	if err := config.DB.Preload("Products").Where(querystring).Find(&categories).Error; err != nil {
+	if err := config.DB.Preload("Products").Preload("Image").Where(querystring).Find(&categories).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	// Return the categories list
 	c.JSON(http.StatusOK, categories)
+}
+
+func GetNestedCategories(c *gin.Context) {
+
+	type Category struct {
+		ID       uint        `json:"id"`
+		Name     string      `json:"name"`
+		ParentID *uint       `json:"parent_id"` // Nullable for top-level categories
+		Level    int         `json:"level"`
+		Path     []int       `json:"-"` // Path to use for ordering; ignore in JSON
+		Children []*Category `json:"children,omitempty"`
+	}
+	var categories []*Category
+
+	query := `
+		WITH RECURSIVE category_hierarchy AS (
+			SELECT id, name, parent_id, 1 AS level, ARRAY[id] AS path
+			FROM categories
+			WHERE parent_id IS NULL
+			UNION ALL
+			SELECT c.id, c.name, c.parent_id, ch.level + 1, ch.path || c.id
+			FROM categories c
+			JOIN category_hierarchy ch ON c.parent_id = ch.id
+		)
+		SELECT id, name, parent_id, level, path
+		FROM category_hierarchy
+		ORDER BY path;`
+
+	if err := config.DB.Raw(query).Scan(&categories).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	buildCategoryTree := func(categories []*Category) []*Category {
+		categoryMap := make(map[uint]*Category)
+		var rootCategories []*Category
+
+		for i := range categories {
+			category := categories[i]           // Current category
+			categoryMap[category.ID] = category // Store in map
+
+			if category.ParentID == nil {
+				rootCategories = append(rootCategories, category) // Add to root if no parent
+			} else {
+				parent := categoryMap[*category.ParentID]
+				parent.Children = append(parent.Children, category) // Append to parent’s children
+			}
+		}
+
+		return rootCategories
+	}
+	nestedCategories := buildCategoryTree(categories)
+	c.JSON(http.StatusOK, nestedCategories)
 }
 
 func GetSubCategories(c *gin.Context) {

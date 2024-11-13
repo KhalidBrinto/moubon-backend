@@ -20,7 +20,7 @@ func main() {
 
 	config.ConnectDatabase()
 
-	router.GET("/", func(ctx *gin.Context) { ctx.JSON(http.StatusOK, "Hanger Craft API Service health is OK") })
+	router.GET("/", func(ctx *gin.Context) { ctx.JSON(http.StatusOK, "Moubon API Service health is OK") })
 	// Liveness Probe: Returns 200 if the app is running
 	router.GET("/health/liveness", func(c *gin.Context) {
 		c.AbortWithStatus(http.StatusOK)
@@ -47,6 +47,8 @@ func main() {
 	routes.ProductRoutes(router)
 	routes.ReviewRoutes(router)
 	routes.UserRoutes(router)
+	routes.BrandRoutes(router)
+	routes.CuponRoutes(router)
 	routes.AdminDashboardRoutes(router)
 
 	router.Run(":3010")
