@@ -21,7 +21,6 @@ type Product struct {
 	Stock       uint     `gorm:"-"`
 	IsChild     bool     `gorm:"default:false"`
 	ParentID    *uint
-	Color       string
 	Size        string
 	BrandID     *uint
 	Brand       Brand          `gorm:"foreignKey:BrandID"`

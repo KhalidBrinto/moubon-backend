@@ -22,7 +22,6 @@ type Product struct {
 	Barcode     *string `gorm:"size:150"`
 	Price       float64 `gorm:"not null"`
 	Currency    string  `gorm:"size:3; not null"`
-	Color       string
 	Size        string
 }
 

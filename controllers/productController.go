@@ -19,8 +19,7 @@ import (
 // CreateProduct creates a new product
 func CreateProduct(c *gin.Context) {
 	type Variation struct {
-		Size  []string
-		Color []string
+		Size []string
 	}
 	var payload struct {
 		Name        string  `gorm:"size:150;not null"`
@@ -35,7 +34,6 @@ func CreateProduct(c *gin.Context) {
 		Stock       uint    `gorm:"-"`
 		IsChild     bool    `gorm:"default:false"`
 		ParentID    *uint
-		Color       string
 		Size        string
 		BrandID     *uint
 		Variations  *Variation
@@ -59,7 +57,6 @@ func CreateProduct(c *gin.Context) {
 		BrandID:     payload.BrandID,
 		Status:      payload.Status,
 		Featured:    payload.Featured,
-		Color:       payload.Color,
 		Size:        payload.Size,
 		Images:      payload.Images,
 	}
@@ -74,25 +71,20 @@ func CreateProduct(c *gin.Context) {
 		var variations []models.Product
 
 		for _, size := range payload.Variations.Size {
-			for _, color := range payload.Variations.Color {
-				variations = append(variations, models.Product{
-					Name:        parent.Name,
-					Description: parent.Description,
-					SKU:         parent.SKU + "-" + size + "-" + color,
-					Barcode:     parent.Barcode,
-					Price:       parent.Price,
-					Currency:    parent.Currency,
-					CategoryID:  parent.CategoryID,
-					Status:      parent.Status,
-					IsChild:     true,
-					ParentID:    &parent.ID,
-					Color:       color,
-					Size:        size,
-					BrandID:     parent.BrandID,
-				})
-
-			}
-
+			variations = append(variations, models.Product{
+				Name:        parent.Name,
+				Description: parent.Description,
+				SKU:         parent.SKU + "-" + size,
+				Barcode:     parent.Barcode,
+				Price:       parent.Price,
+				Currency:    parent.Currency,
+				CategoryID:  parent.CategoryID,
+				Status:      parent.Status,
+				IsChild:     true,
+				ParentID:    &parent.ID,
+				Size:        size,
+				BrandID:     parent.BrandID,
+			})
 		}
 
 		if err := tx.Create(&variations).Error; err != nil {
@@ -391,8 +383,6 @@ func GetSingleProduct(c *gin.Context) {
 						json_build_object(
 						'id', variations.id,
 						'size', variations.size,
-						'color', variations.color
-
 						)
 					)FILTER (WHERE variations.id IS NOT NULL),
             		'[]'
