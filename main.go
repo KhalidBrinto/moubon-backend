@@ -51,6 +51,7 @@ func main() {
 	routes.CuponRoutes(router)
 	routes.AdminDashboardRoutes(router)
 	routes.ShopRoutes(router)
+	routes.ContentRoutes(router)
 
 	router.Run(":3010")
 }

@@ -51,6 +51,7 @@ func ConnectDatabase() {
 		models.CartItem{},
 		models.Category{},
 		models.CategoryImage{},
+		models.ContentImage{},
 		models.Coupon{},
 		models.CouponUsageHistory{},
 		models.Inventory{},
