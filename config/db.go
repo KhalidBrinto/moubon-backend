@@ -46,8 +46,6 @@ func ConnectDatabase() {
 	}
 	log.Println("Attempting to migrate")
 	db.AutoMigrate(
-		models.Brand{},
-		models.BrandImage{},
 		models.CartItem{},
 		models.Category{},
 		models.CategoryImage{},

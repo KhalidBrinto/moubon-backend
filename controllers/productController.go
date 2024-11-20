@@ -19,7 +19,8 @@ import (
 // CreateProduct creates a new product
 func CreateProduct(c *gin.Context) {
 	type Variation struct {
-		Size []string
+		Size  string
+		Price float64
 	}
 	var payload struct {
 		Name        string  `gorm:"size:150;not null"`
@@ -36,7 +37,7 @@ func CreateProduct(c *gin.Context) {
 		ParentID    *uint
 		Size        string
 		BrandID     *uint
-		Variations  *Variation
+		Variations  []Variation
 		Images      []models.ProductImage `gorm:"foreignKey:ProductID"`
 	}
 
@@ -54,7 +55,6 @@ func CreateProduct(c *gin.Context) {
 		Price:       payload.Price,
 		Currency:    payload.Currency,
 		CategoryID:  payload.CategoryID,
-		BrandID:     payload.BrandID,
 		Status:      payload.Status,
 		Featured:    payload.Featured,
 		Size:        payload.Size,
@@ -70,20 +70,19 @@ func CreateProduct(c *gin.Context) {
 	if payload.Variations != nil {
 		var variations []models.Product
 
-		for _, size := range payload.Variations.Size {
+		for _, variation := range payload.Variations {
 			variations = append(variations, models.Product{
 				Name:        parent.Name,
 				Description: parent.Description,
-				SKU:         parent.SKU + "-" + size,
+				SKU:         parent.SKU + "-" + variation.Size,
 				Barcode:     parent.Barcode,
-				Price:       parent.Price,
+				Price:       variation.Price,
 				Currency:    parent.Currency,
 				CategoryID:  parent.CategoryID,
 				Status:      parent.Status,
 				IsChild:     true,
 				ParentID:    &parent.ID,
-				Size:        size,
-				BrandID:     parent.BrandID,
+				Size:        variation.Size,
 			})
 		}
 
@@ -127,7 +126,7 @@ func SearchProducts(c *gin.Context) {
 	searchQuery := ""
 
 	if params.Key != "" {
-		searchQuery = "products.name ILIKE '%" + params.Key + "%' OR sku ILIKE '%" + params.Key + "%' OR categories.name ILIKE '%" + params.Key + "%' OR brands.name ILIKE '%" + params.Key + "%' OR size ILIKE '%" + params.Key + "%'"
+		searchQuery = "products.name ILIKE '%" + params.Key + "%' OR sku ILIKE '%" + params.Key + "%' OR categories.name ILIKE '%" + params.Key + "%' OR size ILIKE '%" + params.Key + "%'"
 	}
 
 	type Product struct {
@@ -141,7 +140,6 @@ func SearchProducts(c *gin.Context) {
 	config.DB.Model(&products).
 		Select(`products.name, products.id`).
 		Joins("LEFT JOIN categories ON products.category_id = categories.id").
-		Joins("LEFT JOIN brands ON products.brand_id = brands.id").
 		Where(searchQuery).
 		Where("products.status = ? AND products.parent_id IS NULL", "published").
 		Group("products.id").Find(&products)
@@ -161,20 +159,15 @@ func GetProducts(c *gin.Context) {
 		Product    models.Product `gorm:"foreignKey:ProductID" json:"-"`
 		StockLevel int            `gorm:"not null"`
 	}
-	type Brand struct {
-		ID   uint        `gorm:"primarykey"`
-		Name null.String `gorm:"size:100;not null"`
-	}
+
 	type Product struct {
 		gorm.Model
-		Name         string  `gorm:"size:150;not null"`
-		Description  string  `gorm:"type:text"`
-		SKU          string  `gorm:"size:150;not null;unique;index"`
-		Barcode      *string `gorm:"size:150"`
-		Price        float64 `gorm:"type:decimal(10,2);not null"`
-		Currency     string  `gorm:"size:3; not null"`
-		BrandID      *uint
-		Brand        Brand           `gorm:"foreignKey:BrandID"`
+		Name         string          `gorm:"size:150;not null"`
+		Description  string          `gorm:"type:text"`
+		SKU          string          `gorm:"size:150;not null;unique;index"`
+		Barcode      *string         `gorm:"size:150"`
+		Price        float64         `gorm:"type:decimal(10,2);not null"`
+		Currency     string          `gorm:"size:3; not null"`
 		CategoryID   uint            `gorm:"not null"`
 		Category     models.Category `gorm:"foreignKey:CategoryID"`
 		Status       *string         `gorm:"not null;check:status IN ('published', 'unpublished')"`
