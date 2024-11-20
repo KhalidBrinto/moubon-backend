@@ -53,7 +53,7 @@ func GetShops(c *gin.Context) {
 func UpdateShop(c *gin.Context) {
 
 	shopID := c.Param("id")
-	var shop *models.Brand
+	var shop *models.Shop
 
 	// Fetch the category from the database
 	if err := config.DB.First(&shop, shopID).Error; err != nil {

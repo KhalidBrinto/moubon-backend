@@ -47,7 +47,6 @@ func main() {
 	routes.ProductRoutes(router)
 	routes.ReviewRoutes(router)
 	routes.UserRoutes(router)
-	routes.BrandRoutes(router)
 	routes.CuponRoutes(router)
 	routes.AdminDashboardRoutes(router)
 	routes.ShopRoutes(router)

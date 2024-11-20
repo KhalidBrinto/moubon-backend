@@ -22,8 +22,6 @@ type Product struct {
 	IsChild     bool     `gorm:"default:false"`
 	ParentID    *uint
 	Size        string
-	BrandID     *uint
-	Brand       Brand          `gorm:"foreignKey:BrandID"`
 	Images      []ProductImage `gorm:"foreignKey:ProductID"`
 }
 
