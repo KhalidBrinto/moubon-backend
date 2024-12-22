@@ -16,10 +16,5 @@ func UserRoutes(router *gin.Engine) {
 		userRoutes.GET("/customer", middlewares.AuthMiddleware(), controllers.GetCustomers)
 		userRoutes.DELETE("/", middlewares.AuthMiddleware(), controllers.DeleteCustomer)
 		userRoutes.DELETE("/:id/", middlewares.AuthMiddleware(), middlewares.CheckIfAdmin(), controllers.DeleteUserByID)
-		// worklogRoutes.GET("/single/:day_identifier", controller.GetWorklogByDayIdentifier)
-		// worklogRoutes.GET("/stat", controller.GetWorklogStat)
-		// worklogRoutes.POST("/", controller.CreateWorklog)
-		// worklogRoutes.PUT("/:uuid/", controller.UpdateWorklog)
-		// worklogRoutes.DELETE("/:uuid/", controller.DeleteWorklog)
 	}
 }

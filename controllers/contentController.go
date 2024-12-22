@@ -10,7 +10,7 @@ import (
 
 func AddBannerImages(c *gin.Context) {
 
-	var content *models.ContentImage
+	var content []*models.ContentImage
 
 	// Bind the incoming JSON to the Category struct
 	if err := c.BindJSON(&content); err != nil {

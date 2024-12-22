@@ -82,6 +82,7 @@ func CreateProduct(c *gin.Context) {
 				IsChild:     true,
 				ParentID:    &parent.ID,
 				Size:        variation.Size,
+				Images:      payload.Images,
 			})
 		}
 
