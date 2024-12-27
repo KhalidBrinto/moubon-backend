@@ -48,3 +48,39 @@ func GetBannerImages(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, response)
 }
+func GetDashboardBannerImages(c *gin.Context) {
+	type Dto struct {
+		ID    uint
+		Image string
+	}
+
+	var response []Dto
+
+	var content []*models.ContentImage
+
+	config.DB.Model(&content).Find(&content).Order("id DESC")
+
+	if len(content) != 0 {
+		for _, image := range content {
+			switch image.Position {
+			case "banner":
+
+				response = append(response, Dto{
+					ID:    image.ID,
+					Image: image.Image,
+				})
+			}
+
+		}
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+func DeleteBannerImage(c *gin.Context) {
+	id := c.Param("id")
+	if err := config.DB.Delete(&models.ContentImage{}, id).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete content"})
+		return
+	}
+	c.JSON(http.StatusNoContent, gin.H{"message": "Content deleted"})
+}

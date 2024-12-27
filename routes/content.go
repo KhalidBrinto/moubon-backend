@@ -12,5 +12,7 @@ func ContentRoutes(router *gin.Engine) {
 	{
 		content.POST("/upload-banner-image/", middlewares.AuthMiddleware(), middlewares.CheckIfAdmin(), controllers.AddBannerImages)
 		content.GET("/banner-image", controllers.GetBannerImages)
+		content.GET("/banner-image/dashboard", controllers.GetDashboardBannerImages)
+		content.DELETE("/banner-image/:id/", controllers.DeleteBannerImage)
 	}
 }
