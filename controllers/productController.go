@@ -82,7 +82,6 @@ func CreateProduct(c *gin.Context) {
 				IsChild:     true,
 				ParentID:    &parent.ID,
 				Size:        variation.Size,
-				Images:      payload.Images,
 			})
 		}
 
@@ -181,14 +180,30 @@ func GetProducts(c *gin.Context) {
 	var model *gorm.DB
 
 	model = config.DB.Model(&products).Preload("Category").Preload("Inventory").Preload("Images").
-		Select(`products.*, 
+		Select(`products.id, 
+				products.created_at, 
+				products.updated_at, 
+				products.deleted_at, 
+				products.name, 
+				products.description, 
+				products.sku, 
+				products.barcode, 
+				p.price,
+				products.currency, 
+				products.category_id, 
+				products.status, 
+				products.featured, 
+				products.is_child, 
+				products.parent_id, 
+				products.size, 
 				count(reviews.id) as total_reviews,
 				AVG(reviews.rating)::int as rating
 			`).
 		Joins("LEFT JOIN reviews ON products.id = reviews.product_id").
+		Joins("LEFT JOIN (SELECT parent_id, MIN(price) AS price from products WHERE is_child = true group by parent_id) p ON p.parent_id = products.id ").
 		Where(querystring).
 		Where("is_child = ?", false).
-		Group("products.id")
+		Group("products.id, p.parent_id, p.price")
 
 	pg := paginate.New()
 	page := pg.With(model).Request(c.Request).Response(&products)

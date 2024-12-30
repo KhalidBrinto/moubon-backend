@@ -66,26 +66,26 @@ func ProductQueryParameterToMap(P Parameters) string {
 
 	if P.StartPrice != nil && P.EndPrice != nil {
 		if querystring != "" {
-			querystring = querystring + " AND " + fmt.Sprintf("price >= %d AND price <= %d", *P.StartPrice, *P.EndPrice)
+			querystring = querystring + " AND " + fmt.Sprintf("p.price >= %d AND p.price <= %d", *P.StartPrice, *P.EndPrice)
 
 		} else {
-			querystring = fmt.Sprintf("price >= %d AND price <= %d", *P.StartPrice, *P.EndPrice)
+			querystring = fmt.Sprintf("p.price >= %d AND p.price <= %d", *P.StartPrice, *P.EndPrice)
 		}
 
 	} else if P.StartPrice != nil && P.EndPrice == nil {
 		if querystring != "" {
-			querystring = querystring + " AND " + fmt.Sprintf("price >= %d", *P.StartPrice)
+			querystring = querystring + " AND " + fmt.Sprintf("p.price >= %d", *P.StartPrice)
 
 		} else {
-			querystring = fmt.Sprintf("price >= %d", *P.StartPrice)
+			querystring = fmt.Sprintf("p.price >= %d", *P.StartPrice)
 		}
 
 	} else if P.StartPrice == nil && P.EndPrice != nil {
 		if querystring != "" {
-			querystring = querystring + " AND " + fmt.Sprintf("price <= %d", *P.EndPrice)
+			querystring = querystring + " AND " + fmt.Sprintf("p.price <= %d", *P.EndPrice)
 
 		} else {
-			querystring = fmt.Sprintf("price <= %d", *P.EndPrice)
+			querystring = fmt.Sprintf("p.price <= %d", *P.EndPrice)
 		}
 	}
 	return querystring
